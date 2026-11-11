@@ -7,7 +7,7 @@
 <body style="margin:0">
 <title>Alhamra Open-Air Theatre</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Figtree:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Figtree:wght@400;500;600&family=Noto+Nastaliq+Urdu:wght@500;600&display=swap">
 <style>
 /* Layout: full-bleed 3D scene; a title plate top-left and a row of viewpoint buttons along the bottom, both floating over the scene. */
 :root {
@@ -19,6 +19,8 @@
   --tile: #1f3a93;            /* cobalt tile */
   --glaze: #1d8f8b;           /* turquoise glaze */
   --on-tile: #f7f3ea;
+  --lamp: #a85a06;            /* lamp amber: show ideas that are switched on */
+  --on-lamp: #fff8ec;
   --display: "Marcellus", "Palatino Linotype", Palatino, Georgia, serif;
   --body: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
@@ -32,6 +34,8 @@
     --tile: #3b59c4;
     --glaze: #52c4be;
     --on-tile: #ffffff;
+    --lamp: #e9a03a;
+    --on-lamp: #1d1405;
     color-scheme: dark;
   }
 }
@@ -44,6 +48,8 @@
   --tile: #3b59c4;
   --glaze: #52c4be;
   --on-tile: #ffffff;
+  --lamp: #e9a03a;
+  --on-lamp: #1d1405;
   color-scheme: dark;
 }
 html, body { height: 100%; }
@@ -115,6 +121,8 @@ body {
 .views button:hover { border-color: var(--glaze); }
 .views button:focus-visible { outline: 2px solid var(--glaze); outline-offset: 2px; }
 .views button[aria-pressed="true"] { background: var(--tile); border-color: var(--tile); color: var(--on-tile); }
+.rowlabel { font: 600 11px/1 var(--body); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink); background: var(--plate); border: 1px solid var(--plate-line); padding: 10px 8px; }
+.ideas button[aria-pressed="true"] { background: var(--lamp); border-color: var(--lamp); color: var(--on-lamp); }
 .hint {
   margin: 0;
   font-size: 12px;
@@ -132,7 +140,9 @@ body {
 }
 @media (max-width: 520px) {
   .plate h1 { font-size: 19px; }
-  .views button { padding: 8px 10px; font-size: 12px; }
+  .views button { padding: 8px 9px; font-size: 12px; }
+  .rowlabel { padding: 9px 6px; font-size: 10px; }
+  .dock { gap: 6px; }
 }
 </style>
 
@@ -151,12 +161,24 @@ body {
         <dt>Drum</dt><dd>70 m across, about 18 m high</dd>
         <dt>Arena</dt><dd>hexagon, 26 m across</dd>
       </dl>
+      <p>The Ideas buttons switch the model to night and stage six concept sketches for the mehfil concert. They are illustrations of ideas, not engineered designs.</p>
       <p>Rebuilt from published photographs, written descriptions and the OpenStreetMap footprint. The plan size is measured. Heights, row counts and the lower wings are estimated from photos, so treat this as a faithful sketch and not a survey.</p>
     </details>
   </div>
 
   <div class="dock">
+    <div class="views ideas" role="group" aria-label="Show ideas">
+      <span class="rowlabel">Ideas</span>
+      <button type="button" id="i-day" aria-pressed="true">Daylight</button>
+      <button type="button" id="i-chiragh" data-idea="chiragh" aria-pressed="false">48 lamps</button>
+      <button type="button" id="i-alfaaz" data-idea="alfaaz" aria-pressed="false">Words</button>
+      <button type="button" id="i-takht" data-idea="takht" aria-pressed="false">Takht</button>
+      <button type="button" id="i-gumbad" data-idea="gumbad" aria-pressed="false">Dome</button>
+      <button type="button" id="i-laari" data-idea="laari" aria-pressed="false">Chase</button>
+      <button type="button" id="i-gulpashi" data-idea="gulpashi" aria-pressed="false">Petals</button>
+    </div>
     <div class="views" role="group" aria-label="Viewpoints">
+      <span class="rowlabel">View</span>
       <button type="button" id="v-aerial" data-view="aerial" aria-pressed="true">Aerial</button>
       <button type="button" id="v-forecourt" data-view="forecourt" aria-pressed="false">Forecourt</button>
       <button type="button" id="v-rim" data-view="rim" aria-pressed="false">Top rim</button>
@@ -606,6 +628,264 @@ body {
   figure(P(70, AXIS + 3, 0), 0x7c2f58);
   figure(P(71, AXIS + 4, 0), 0x2f4f7c);
 
+
+  // ---------- Show ideas: night mode and six concept sketches ----------
+  var lin = function (hex) { return new T.Color(hex).convertSRGBToLinear(); };
+  var daySky = sky.material.map;
+  var nightSky = canvasTex(16, 512, function (g, w, h) {
+    var gr = g.createLinearGradient(0, 0, 0, h);
+    gr.addColorStop(0, '#04050d'); gr.addColorStop(0.36, '#0c1130'); gr.addColorStop(0.5, '#2b2440'); gr.addColorStop(1, '#131120');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  });
+  var dayFog = scene.fog.color.clone(), nightFog = lin(0x131120);
+  var dayHemi = [hemi.color.clone(), hemi.groundColor.clone()], nightHemi = [lin(0x36426f), lin(0x15131c)];
+  var daySun = sun.color.clone(), moon = lin(0x9db4e8);
+  var glowTex = canvasTex(64, 64, function (g) {
+    var gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.22, 'rgba(255,255,255,0.6)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  });
+  function glowPoints(n, size, normalBlend) {
+    var g = new T.BufferGeometry();
+    g.setAttribute('position', new T.BufferAttribute(new Float32Array(n * 3), 3));
+    g.setAttribute('color', new T.BufferAttribute(new Float32Array(n * 3), 3));
+    var m = new T.PointsMaterial({ size: size, map: glowTex, vertexColors: true, transparent: true, depthWrite: false, fog: false,
+      blending: normalBlend ? T.NormalBlending : T.AdditiveBlending });
+    var pts = new T.Points(g, m); pts.frustumCulled = false; pts.visible = false; scene.add(pts); return pts;
+  }
+  function pointLight(pos, dist, decay) { var l = new T.PointLight(0xffffff, 0, dist, decay); l.position.copy(pos); scene.add(l); return l; }
+  var rimLights = [0, 1, 2, 3].map(function (k) { return pointLight(P(26, 45 + 90 * k, H_RIM + 3), 80, 1.4); });
+  var centreLight = pointLight(new V3(0, FLOOR + 7, 0), 62, 1.2);
+  var courtLight = pointLight(P(57, AXIS, 6), 70, 1.3);
+
+  var ideas = { chiragh: false, alfaaz: false, takht: false, gumbad: false, laari: false, gulpashi: false }, onAt = {}, clock = 0;
+  var NOTES = {
+    chiragh: '48 lamps: the flame passes arch to arch around the rim',
+    alfaaz: 'Words on the floor: the arena floor is the screen every seat can read',
+    takht: 'Turning takht: the qawwals turn to face every bank, chorus groups sit in the audience',
+    gumbad: 'Dome of light: six masts carry a ring over the stage, drones draw a dome above',
+    laari: 'The chase: light races round the 48 arches for Laaree Chootee',
+    gulpashi: 'Arrival and petals: the forecourt columns glow, rose petals fall on the arena'
+  };
+
+  // 1. Chiraghan and 5. Laari share the 48 rim lamps
+  var lampMesh = new T.InstancedMesh(new T.SphereGeometry(0.36, 12, 10), new T.MeshBasicMaterial({ color: 0xffffff, fog: false }), BAYS);
+  var lampGlow = glowPoints(BAYS, 8);
+  for (i = 0; i < BAYS; i++) {
+    var lp = P(R - 0.55, (i + 0.5) * BAY, H_RIM + 1.45);
+    dummy.position.copy(lp); dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1); dummy.updateMatrix();
+    lampMesh.setMatrixAt(i, dummy.matrix); lampMesh.setColorAt(i, tc.setRGB(0, 0, 0));
+    lampGlow.geometry.attributes.position.setXYZ(i, lp.x, lp.y, lp.z);
+  }
+  lampMesh.visible = false; scene.add(lampMesh);
+  var quad = [0, 1, 2, 3].map(function () { return { r: 0, g: 0, b: 0 }; }), hsl = new T.Color();
+  function updateLamps(t) {
+    var col = lampGlow.geometry.attributes.color, head = (t * 15) % BAYS, tOn = t - (onAt.chiragh || 0), n, q;
+    for (n = 0; n < 4; n++) { quad[n].r = quad[n].g = quad[n].b = 0; }
+    for (n = 0; n < BAYS; n++) {
+      var r = 0, g = 0, b = 0;
+      if (ideas.chiragh) {
+        var ang = (n + 0.5) * BAY * Math.PI / 180;
+        var lit = Math.min(1, Math.max(0, (tOn * 6 - n) / 2));               // the flame is passed lamp to lamp
+        var wave = Math.pow(Math.abs(Math.cos((ang - t * 0.8) / 2)), 20);     // then one slow pulse travels the ring
+        var I = lit * (0.36 + 0.64 * wave) * (0.92 + 0.08 * Math.sin(t * 9 + n * 2.7));
+        r += I; g += 0.56 * I; b += 0.18 * I;
+      }
+      if (ideas.laari) {
+        var d = (head - n + BAYS) % BAYS, J = Math.exp(-d / 5) * 1.25;
+        hsl.setHSL((n / BAYS + t * 0.07) % 1, 1, 0.5);
+        r += hsl.r * J; g += hsl.g * J; b += hsl.b * J;
+      }
+      col.setXYZ(n, r, g, b);
+      lampMesh.setColorAt(n, tc.setRGB(Math.min(1, r * 1.7), Math.min(1, g * 1.7), Math.min(1, b * 1.7)));
+      q = quad[Math.floor(n / 12)]; q.r += r / 12; q.g += g / 12; q.b += b / 12;
+    }
+    col.needsUpdate = true; lampMesh.instanceColor.needsUpdate = true;
+    rimLights.forEach(function (l, k) { l.color.setRGB(quad[k].r, quad[k].g, quad[k].b); l.intensity = 1.35; });
+  }
+
+  // 2. Alfaaz: words written on the arena floor
+  var ALFAAZ = '\u0627\u0644\u0641\u0627\u0638', RING = ['\u0645\u062d\u0641\u0644', '\u0639\u0634\u0642', '\u0622\u0648\u0627\u0632', '\u062f\u0644', '\u0644\u0627\u06c1\u0648\u0631', '\u0633\u0646\u06af\u062a'];
+  var wordCanvas = document.createElement('canvas'); wordCanvas.width = wordCanvas.height = 1024;
+  var wordTex = new T.CanvasTexture(wordCanvas); wordTex.encoding = T.sRGBEncoding; wordTex.anisotropy = maxAniso;
+  function drawWords() {
+    var g = wordCanvas.getContext('2d'), W = 1024, f = '"Noto Nastaliq Urdu", "Geeza Pro", "Segoe UI", serif', n;
+    g.clearRect(0, 0, W, W); g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.shadowColor = 'rgba(255,180,80,0.95)'; g.shadowBlur = 22; g.fillStyle = '#ffe6b0';
+    g.font = '600 170px ' + f; g.fillText(ALFAAZ, W / 2, W / 2 - 30);
+    g.font = '500 58px ' + f; g.fillStyle = '#ffc870'; g.shadowBlur = 12;
+    for (n = 0; n < 12; n++) { g.save(); g.translate(W / 2, W / 2); g.rotate(n * Math.PI / 6); g.fillText(RING[n % 6], 0, -392); g.restore(); }
+    g.shadowBlur = 8; g.strokeStyle = 'rgba(255,200,110,0.75)'; g.lineWidth = 3;
+    [300, 478].forEach(function (rr) { g.beginPath(); g.arc(W / 2, W / 2, rr, 0, Math.PI * 2); g.stroke(); });
+    wordTex.needsUpdate = true;
+  }
+  drawWords();
+  if (document.fonts && document.fonts.load) { try { document.fonts.load('600 64px "Noto Nastaliq Urdu"', ALFAAZ).then(drawWords, function () {}); } catch (err) {} }
+  var wordGeo = new T.CircleGeometry(11.1, 64); wordGeo.rotateX(-Math.PI / 2);
+  var wordFloor = new T.Mesh(wordGeo, new T.MeshBasicMaterial({ map: wordTex, transparent: true, blending: T.AdditiveBlending, depthWrite: false, fog: false }));
+  wordFloor.position.y = FLOOR + 0.05; wordFloor.visible = false; scene.add(wordFloor);
+
+  // 3. The turning takht, with chorus groups seated in the audience
+  var mKurta = M({ color: 0xece6da }), mSkin = M({ color: 0x8a5a3c }), mCarpet = M({ color: 0x7a1f2b }), mWood = M({ color: 0x4a2f1c }), mBlack = M({ color: 0x1c1c22 });
+  var gBody = new T.CylinderGeometry(0.2, 0.26, 1, 10), gHead = new T.SphereGeometry(0.15, 10, 8);
+  function person(parent, x, y, z, seated, mat) {
+    var h = seated ? 0.7 : 1.35, w = seated ? 1.3 : 1;
+    var body = new T.Mesh(gBody, mat); body.scale.set(w, h, w); body.position.set(x, y + h / 2, z); body.castShadow = true;
+    var head = new T.Mesh(gHead, mSkin); head.position.set(x, y + h + 0.17, z);
+    parent.add(body); parent.add(head);
+  }
+  var takht = new T.Group(); takht.position.y = FLOOR; takht.visible = false; scene.add(takht);
+  var deck = new T.Mesh(new T.CylinderGeometry(3.7, 3.7, 0.45, 48), [mCream, mCarpet, mCarpet]); deck.position.y = 0.225; deck.receiveShadow = true; takht.add(deck);
+  [-1.2, 0, 1.2].forEach(function (x) { person(takht, x, 0.45, 0.9, true, mKurta); });              // lead voices
+  [-2.1, -1.05, 0, 1.05, 2.1].forEach(function (x) { person(takht, x, 0.45, -0.7, true, mKurta); }); // chorus behind
+  [-0.6, 0.6].forEach(function (x) { var hm = new T.Mesh(new T.BoxGeometry(0.62, 0.26, 0.34), mWood); hm.position.set(x, 0.58, 1.55); takht.add(hm); });
+  [[-2.2, 0.9], [2.2, 0.9]].forEach(function (q) { var tb = new T.Mesh(new T.CylinderGeometry(0.17, 0.2, 0.32, 12), mWood); tb.position.set(q[0], 0.61, q[1]); takht.add(tb); person(takht, q[0], 0.45, q[1] - 0.75, true, mKurta); });
+  var pods = new T.Group(); pods.visible = false; scene.add(pods);
+  var podGlow = glowPoints(6, 2.4);
+  for (i = 0; i < 6; i++) {
+    var prot = rad(BANK0 + 60 * i), pc = Math.cos(prot), ps = Math.sin(prot);
+    for (var j = -1; j <= 1; j++) {
+      var lz = SHIFT + 3.4 + j * 0.75;
+      person(pods, 16.4 * pc + lz * ps, 7.0, -16.4 * ps + lz * pc, true, mKurta);
+    }
+    podGlow.geometry.attributes.position.setXYZ(i, 16.4 * pc + (SHIFT + 3.4) * ps, 9.3, -16.4 * ps + (SHIFT + 3.4) * pc);
+    podGlow.geometry.attributes.color.setXYZ(i, 0.12, 0.3, 1.0);
+  }
+
+  // 4. Gumbad: six masts, a ring of light, lamps on winches, and a drone dome
+  var gumbad = new T.Group(); gumbad.visible = false; scene.add(gumbad);
+  var MAST_H = 13, RING_Y = FLOOR + 10.5, RING_R = 7, cable = [];
+  for (i = 0; i < 6; i++) {
+    var mp = P(12.3, BANK0 - 30 + 60 * i, FLOOR), rp = P(RING_R, BANK0 - 30 + 60 * i, RING_Y);
+    var mast = new T.Mesh(new T.CylinderGeometry(0.13, 0.19, MAST_H, 10), mBlack); mast.position.set(mp.x, FLOOR + MAST_H / 2, mp.z); mast.castShadow = true; gumbad.add(mast);
+    cable.push(mp.x, FLOOR + MAST_H, mp.z, rp.x, rp.y, rp.z);
+  }
+  var cableGeo = new T.BufferGeometry(); cableGeo.setAttribute('position', new T.Float32BufferAttribute(cable, 3));
+  gumbad.add(new T.LineSegments(cableGeo, new T.LineBasicMaterial({ color: 0x8a8fa8 })));
+  var halo = new T.Mesh(new T.TorusGeometry(RING_R, 0.17, 10, 72), new T.MeshBasicMaterial({ color: new T.Color(1, 0.62, 0.2), fog: false }));
+  halo.rotation.x = Math.PI / 2; halo.position.y = RING_Y; gumbad.add(halo);
+  var WINCH = 30, winchXZ = [], winchMesh = new T.InstancedMesh(new T.SphereGeometry(0.15, 10, 8), new T.MeshBasicMaterial({ color: new T.Color(1, 0.85, 0.6), fog: false }), WINCH);
+  var winchGlow = glowPoints(WINCH, 2.6);
+  for (i = 0; i < WINCH; i++) {
+    var wr = i < 18 ? 5.6 : 3.0, wa = i < 18 ? i / 18 : (i - 18) / 12;
+    winchXZ.push([wr * Math.cos(wa * 6.2832), wr * Math.sin(wa * 6.2832), wa * 6.2832, i < 18 ? 0 : 1.6]);
+    winchGlow.geometry.attributes.color.setXYZ(i, 1, 0.72, 0.36);
+  }
+  winchMesh.visible = false; scene.add(winchMesh);
+  var DOME_M = 28, DOME_L = 14, DOME_N = DOME_M * DOME_L + 7, drones = glowPoints(DOME_N, 3.4), droneBase = [];
+  var DOME_Y = H_RIM + H_PAR + 5, DOME_R = 37, DOME_H = 30;
+  for (var lv = 0; lv < DOME_L; lv++) for (var me = 0; me < DOME_M; me++) {
+    var da = lv / DOME_L * Math.PI / 2, dr = DOME_R * Math.cos(da) * (1 + 0.14 * Math.sin(2 * da)), dth = (me + (lv % 2) * 0.5) / DOME_M * 6.2832;
+    droneBase.push(dr * Math.cos(dth), DOME_Y + DOME_H * Math.sin(da), dr * Math.sin(dth));
+  }
+  for (i = 0; i < 7; i++) droneBase.push(0, DOME_Y + DOME_H + 0.6 + i * 1.3, 0);     // finial
+
+  // 5. Laari extras: a band on the floor and beams from the rim
+  var band = new T.Group(); band.visible = false; scene.add(band);
+  [[5.8, 0], [-5.8, 0.6], [0.8, 6.0], [-1.0, -6.2], [4.4, -4.4]].forEach(function (q) { person(band, q[0], FLOOR, q[1], false, mBlack); });
+  var kit = new T.Mesh(new T.CylinderGeometry(0.9, 0.9, 0.9, 16), mBlack); kit.position.set(-4.6, FLOOR + 0.45, 4.6); band.add(kit);
+  var beamGeo = new T.ConeGeometry(3.4, 1, 20, 1, true); beamGeo.translate(0, -0.5, 0);
+  var beams = [], DOWN = new V3(0, -1, 0), bdir = new V3();
+  for (i = 0; i < 6; i++) {
+    var bm = new T.Mesh(beamGeo, new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.09, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, fog: false }));
+    bm.position.copy(P(R - 1.2, BANK0 + 60 * i, H_RIM + 3.0)); bm.visible = false; scene.add(bm); beams.push(bm);
+  }
+
+  // 6. Gul-pashi: lit forecourt columns and rose petals over the arena
+  var courtGlow = glowPoints(8, 7);
+  [-27, -20, -13, -6, 6, 13, 20, 27].forEach(function (d, n) {
+    var cp = P(52, AXIS + d, 0.9); courtGlow.geometry.attributes.position.setXYZ(n, cp.x, cp.y, cp.z); courtGlow.geometry.attributes.color.setXYZ(n, 1, 0.6, 0.22);
+  });
+  var PETALS = 700, petals = glowPoints(PETALS, 0.55, true), petal = [];
+  for (i = 0; i < PETALS; i++) {
+    var pr = Math.sqrt(rnd()) * 12.5, pa = rnd() * 6.2832;
+    petal.push({ x: pr * Math.cos(pa), z: pr * Math.sin(pa), y: FLOOR + rnd() * 17, v: 1.1 + rnd() * 1.2, ph: rnd() * 6.28 });
+    petals.geometry.attributes.color.setXYZ(i, 0.55 + rnd() * 0.3, 0.02 + rnd() * 0.08, 0.08 + rnd() * 0.12);
+  }
+
+  var night = false, noteEl = document.getElementById('hint');
+  function applyIdeas(lastName) {
+    var any = false, k; for (k in ideas) if (ideas[k]) any = true;
+    night = any;
+    sky.material.map = night ? nightSky : daySky; sky.material.needsUpdate = true;
+    scene.fog.color.copy(night ? nightFog : dayFog);
+    hemi.color.copy(night ? nightHemi[0] : dayHemi[0]); hemi.groundColor.copy(night ? nightHemi[1] : dayHemi[1]); hemi.intensity = night ? 0.24 : 0.8;
+    sun.color.copy(night ? moon : daySun); sun.intensity = night ? 0.16 : 1.7;
+    renderer.toneMappingExposure = night ? 1.0 : 0.95;
+    mShade.emissive.copy(night ? lin(0x5a2c0c) : lin(0x000000));
+    mColumn.emissive.copy(ideas.gulpashi ? lin(0x7a4212) : lin(0x000000));
+    var lamps = ideas.chiragh || ideas.laari;
+    lampMesh.visible = lampGlow.visible = lamps;
+    wordFloor.visible = ideas.alfaaz;
+    takht.visible = pods.visible = podGlow.visible = ideas.takht;
+    gumbad.visible = winchMesh.visible = winchGlow.visible = drones.visible = ideas.gumbad;
+    band.visible = ideas.laari; beams.forEach(function (bm) { bm.visible = ideas.laari; });
+    courtGlow.visible = petals.visible = ideas.gulpashi;
+    if (!lamps) rimLights.forEach(function (l) { l.intensity = 0; });
+    if (!night) { centreLight.intensity = 0; courtLight.intensity = 0; }
+    document.getElementById('i-day').setAttribute('aria-pressed', night ? 'false' : 'true');
+    Array.prototype.forEach.call(document.querySelectorAll('.ideas button[data-idea]'), function (bn) {
+      bn.setAttribute('aria-pressed', ideas[bn.getAttribute('data-idea')] ? 'true' : 'false');
+    });
+    if (lastName && ideas[lastName]) noteEl.textContent = NOTES[lastName]; else setHint();
+  }
+  function setIdea(name, on) { if (!(name in ideas)) return; ideas[name] = on; if (on) onAt[name] = clock; applyIdeas(name); }
+  Array.prototype.forEach.call(document.querySelectorAll('.ideas button[data-idea]'), function (bn) {
+    bn.addEventListener('click', function () { var n = bn.getAttribute('data-idea'); setIdea(n, !ideas[n]); });
+  });
+  document.getElementById('i-day').addEventListener('click', function () { for (var k in ideas) ideas[k] = false; applyIdeas(); });
+
+  var cAcc = new T.Color();
+  function showUpdate(t, dt) {
+    clock = t;
+    if (!night) return;
+    var n, pa2, ca, e;
+    if (ideas.chiragh || ideas.laari) updateLamps(t);
+    // one shared light over the arena, coloured by whatever is switched on
+    cAcc.setRGB(0, 0, 0);
+    if (ideas.takht) { cAcc.r += 0.9; cAcc.g += 0.66; cAcc.b += 0.42; }
+    if (ideas.alfaaz) { e = 0.5 + 0.15 * Math.sin(t * 1.3); cAcc.r += e; cAcc.g += e * 0.78; cAcc.b += e * 0.4; }
+    if (ideas.gumbad) { cAcc.r += 0.8; cAcc.g += 0.5; cAcc.b += 0.18; }
+    if (ideas.laari) { hsl.setHSL((t * 0.21) % 1, 1, 0.5); cAcc.r += hsl.r * 0.9; cAcc.g += hsl.g * 0.9; cAcc.b += hsl.b * 0.9; }
+    centreLight.color.copy(cAcc); centreLight.intensity = 0.95;
+    courtLight.color.setRGB(1, 0.6, 0.24); courtLight.intensity = ideas.gulpashi ? 2.4 : 0;
+    if (ideas.alfaaz) { wordFloor.rotation.y = t * 0.06; wordFloor.material.opacity = 0.82 + 0.18 * Math.sin(t * 1.3); }
+    if (ideas.takht) takht.rotation.y = t * (reduce ? 0 : 0.16);
+    if (ideas.gumbad) {
+      pa2 = winchGlow.geometry.attributes.position;
+      for (n = 0; n < WINCH; n++) {
+        var w4 = winchXZ[n], wy = FLOOR + 6.6 + 2.4 * Math.sin(t * 0.7 + w4[2] * 2 + w4[3]);
+        dummy.position.set(w4[0], wy, w4[1]); dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1); dummy.updateMatrix();
+        winchMesh.setMatrixAt(n, dummy.matrix); pa2.setXYZ(n, w4[0], wy, w4[1]);
+      }
+      winchMesh.instanceMatrix.needsUpdate = true; pa2.needsUpdate = true;
+      var rise = Math.min(1, (t - (onAt.gumbad || 0)) / 5); rise = rise * rise * (3 - 2 * rise);      // the drones lift off, then hold
+      pa2 = drones.geometry.attributes.position; ca = drones.geometry.attributes.color;
+      for (n = 0; n < DOME_N; n++) {
+        pa2.setXYZ(n, droneBase[n * 3], 1 + (droneBase[n * 3 + 1] - 1) * rise, droneBase[n * 3 + 2]);
+        e = 0.55 + 0.45 * Math.sin(t * 2.1 + n * 1.7);
+        ca.setXYZ(n, 0.55 * e, 0.75 * e, 1.0 * e);
+      }
+      pa2.needsUpdate = true; ca.needsUpdate = true; drones.rotation.y = t * 0.03;
+    }
+    if (ideas.laari) {
+      beams.forEach(function (bm, k) {
+        bdir.set(7 * Math.cos(t * 1.7 + k * 1.1), FLOOR, 7 * Math.sin(t * 1.3 + k * 2.3)).sub(bm.position);
+        var len = bdir.length(); bdir.normalize();
+        bm.quaternion.setFromUnitVectors(DOWN, bdir); bm.scale.set(1, len, 1);
+        bm.material.color.setHSL((k / 6 + t * 0.12) % 1, 1, 0.55);
+      });
+    }
+    if (ideas.gulpashi) {
+      pa2 = petals.geometry.attributes.position;
+      for (n = 0; n < PETALS; n++) {
+        var pt = petal[n]; pt.y -= pt.v * dt; if (pt.y < FLOOR + 0.05) pt.y = FLOOR + 17;
+        pa2.setXYZ(n, pt.x + 0.5 * Math.sin(t * 0.9 + pt.ph), pt.y, pt.z + 0.5 * Math.cos(t * 0.7 + pt.ph));
+      }
+      pa2.needsUpdate = true;
+    }
+  }
+
   // ---------- Camera: orbit outside, look around inside ----------
   var state = { mode: 'orbit', target: new V3(0, 6, 0), r: 165, az: rad(AXIS), el: rad(24), pos: new V3(), yaw: 0, pitch: 0, fov: 42 };
   var VIEWS = {
@@ -729,12 +1009,13 @@ body {
       camera.fov = state.fov;
     }
     camera.updateProjectionMatrix();
+    showUpdate(now / 1000, dt);
     sky.position.copy(camera.position);
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
-  window.__alhamra = { goTo: goTo, state: state };
+  window.__alhamra = { goTo: goTo, state: state, setIdea: setIdea };
 })();
 </script>
 
